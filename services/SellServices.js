@@ -2,6 +2,8 @@ const pagarme = require('pagarme');
 const mercadopago = require('mercadopago');
 require('../config/getEnv');
 
+console.log(process.env.MERCADO_PAGO_ACCESS_TOKEN);
+
 module.exports = {
     purchase: {
         async byCreditCard(req, res, next) {
@@ -96,19 +98,20 @@ module.exports = {
     },
     purchase_mercado_pago: {
         async byCreditCard(req, res, next) {
-            mercadopago.configurations.setAccessToken(process.env.MERCADO_PAGO_ACCESS_TOKEN);
-            const { transaction_amount, token, description, installments, payment_method_id, email } = req.body;
-
+            await mercadopago.configurations.setAccessToken(process.env.MERCADO_PAGO_ACCESS_TOKEN);
+            
+            const { description, token, transaction_amount, installments, payment_method_id, email } = req.body;
             const payment_data = {
-                transaction_amount: transaction_amount,
+                transaction_amount: parseInt(transaction_amount),
                 token: token,
                 description: description,
-                installments: installments,
+                installments: parseInt(installments),
                 payment_method_id: payment_method_id,
                 payer: {
                     email: email
                 }
             };
+
             
             const data = await mercadopago.payment.save(payment_data);
             if(data){
