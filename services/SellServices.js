@@ -2,7 +2,11 @@ const pagarme = require('pagarme');
 const mercadopago = require('mercadopago');
 require('../config/getEnv');
 
-console.log(process.env.MERCADO_PAGO_ACCESS_TOKEN);
+const getFullUrl = (req) => {
+    const url = req.protocol + '://' + req.get('host');
+    console.log(url)
+    return url;
+}
 
 module.exports = {
     purchase: {
@@ -97,28 +101,82 @@ module.exports = {
         }
     },
     purchase_mercado_pago: {
-        async byCreditCard(req, res, next) {
-            await mercadopago.configurations.setAccessToken(process.env.MERCADO_PAGO_ACCESS_TOKEN);
-            
-            const { description, token, transaction_amount, installments, payment_method_id, email } = req.body;
-            const payment_data = {
-                transaction_amount: parseInt(transaction_amount),
-                token: token,
-                description: description,
-                installments: parseInt(installments),
-                payment_method_id: payment_method_id,
-                payer: {
-                    email: email
-                }
-            };
+        byApi: {
+            async byCreditCard(req, res, next) {
+                await mercadopago.configurations.setAccessToken(process.env.MERCADO_PAGO_ACCESS_TOKEN);
 
-            
-            const data = await mercadopago.payment.save(payment_data);
-            if(data){
-                console.log(data);
-                return res.json(data);
-            }
-            return res.json({ status : 400 });
+                const { description, token, transaction_amount, installments, payment_method_id, email } = req.body;
+                const payment_data = {
+                    transaction_amount: parseInt(transaction_amount),
+                    token: token,
+                    description: description,
+                    installments: parseInt(installments),
+                    payment_method_id: payment_method_id,
+                    payer: {
+                        email: email
+                    }
+                };
+
+
+                const data = await mercadopago.payment.save(payment_data);
+                if (data) {
+                    console.log(data);
+                    //depois fazer um if data.status == approved
+                    res.redirect('https://mateus-tests.github.io/rpgzoneFront/be-a-pro-success.html');
+                }
+                return res.json({ status: 400 });
+            },
         },
+        bySmart: {
+            async bySmartCheckout(req, res, next) {
+                const { id, email, description, amount, quantity } = req.params;
+                mercadopago.configure({
+                    sandbox: process.env.SANDBOX == 'true' ? true : false,
+                    access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN
+                });
+
+                const purchaseOrder = {
+                    items: [
+                        item = {
+                            id: id,
+                            title: description,
+                            description: description,
+                            quantity: parseInt(quantity),
+                            currency_id: 'BRL',
+                            unit_price: parseFloat(amount)
+                        }
+                    ],
+                    payer: {
+                        email: email
+                    },
+                    auto_return: "all",
+                    external_reference: id,
+                    back_urls: {
+                        success: getFullUrl(req) + "/payments/success",
+                        pending: getFullUrl(req) + "/payments/pending",
+                        failure: getFullUrl(req) + "/payments/failure",
+                    }
+                }
+                try {
+                    const response = await mercadopago.preferences.create(purchaseOrder);
+                    console.log(response.body.init_point);
+                    return res.redirect(`${response.body.init_point}`);
+                } catch(err){
+                    return res.send(err.message);
+                }
+            }
+        }
+
+    },
+    callbacks : {
+        async paymentSuccess () {
+
+        },
+        async paymentPending () {
+
+        },
+        async paymentFailure () {
+
+        }
     }
 }
