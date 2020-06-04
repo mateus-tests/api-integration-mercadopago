@@ -1,6 +1,6 @@
 const pagarme = require('pagarme');
 const mercadopago = require('mercadopago');
-require('../config/getEnv');
+//require('../config/getEnv');
 
 const getFullUrl = (req) => {
     const url = req.protocol + '://' + req.get('host');
