@@ -16,5 +16,6 @@ router.get("/payments/failure", SellController.state.failure);
 router.post("/buy/product/boleto", SellController.sellProductFirstWay);
 
 router.post("/buy/product/creditcard", SellController.sellProductSecondWay);
+router.get("", (req, res) => { res.json({success : 'true'}) });
 
 module.exports = router;
